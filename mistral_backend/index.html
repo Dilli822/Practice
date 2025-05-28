@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat with Ollama - Bootstrap</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="d-flex flex-column vh-100">
+
+  <header class="bg-primary text-white p-3 text-center fs-4 fw-bold">
+    Chat with Ollama
+  </header>
+
+  <main id="chat" class="flex-grow-1 overflow-auto p-3 bg-light d-flex flex-column gap-3">
+    <!-- Chat messages will appear here -->
+  </main>
+
+  <footer class="p-3 bg-white border-top">
+    <form id="chat-form" class="d-flex gap-2" onsubmit="return false;">
+      <textarea
+        id="prompt"
+        class="form-control"
+        rows="1"
+        placeholder="Type your message here..."
+        style="resize: none;"
+        required
+      ></textarea>
+      <button id="send-btn" type="submit" class="btn btn-primary">
+        Send
+      </button>
+    </form>
+  </footer>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const promptInput = document.getElementById('prompt');
+    const sendBtn = document.getElementById('send-btn');
+    const chatForm = document.getElementById('chat-form');
+
+    function appendMessage(text, sender) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('p-3', 'rounded-3', 'shadow-sm', 'w-75');
+
+      if (sender === 'user') {
+        msgDiv.classList.add('bg-success', 'text-white', 'ms-auto', 'text-end');
+      } else {
+        msgDiv.classList.add('bg-secondary', 'text-white', 'me-auto', 'text-start');
+      }
+
+      msgDiv.textContent = text;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendPrompt() {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      appendMessage(prompt, 'user');
+      promptInput.value = '';
+      sendBtn.disabled = true;
+
+      // Placeholder bot message
+      const placeholder = document.createElement('div');
+      placeholder.classList.add('p-3', 'rounded-3', 'shadow-sm', 'w-75', 'bg-secondary', 'text-white', 'me-auto', 'text-start');
+      placeholder.textContent = '...';
+      chat.appendChild(placeholder);
+      chat.scrollTop = chat.scrollHeight;
+
+      try {
+        const res = await fetch('http://localhost:11434/v1/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'mistral',
+            prompt: prompt,
+            max_tokens: 200
+          }),
+        });
+
+        placeholder.remove();
+
+        if (!res.ok) {
+          const errText = await res.text();
+          appendMessage('Error: ' + errText, 'bot');
+          sendBtn.disabled = false;
+          return;
+        }
+
+        const data = await res.json();
+        const botResponse = data.choices?.[0]?.text || '[No response]';
+        appendMessage(botResponse.trim(), 'bot');
+      } catch (err) {
+        placeholder.remove();
+        appendMessage('Fetch error: ' + err.message, 'bot');
+      } finally {
+        sendBtn.disabled = false;
+        promptInput.focus();
+      }
+    }
+
+    chatForm.addEventListener('submit', sendPrompt);
+
+    // Send on Enter, Shift+Enter for new line
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendPrompt();
+      }
+    });
+
+    promptInput.focus();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
