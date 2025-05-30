@@ -265,7 +265,7 @@ def rag_pipeline():
     print("=" * 60)
     print("Optimized for limited models - aggressive context injection")
     print("Type 'exit' to quit.\n")
-    
+    #
     while True:
         user_query = input("💬 Your Question: ").strip()
         if user_query.lower() in ["exit", "quit", "q"]:
